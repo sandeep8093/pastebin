@@ -6,49 +6,46 @@ const bcrypt = require('bcrypt');
 
 exports.signup = async (req, res) => {
   let { email, password,username  } = req.body;
-  const newUser = new User({
-    email: email,
-    username:username,
-    password: bcrypt.hashSync(password, 10),
-  });
-
-  try {
+  try{
+    const user = await User.findOne({ email });
+    if(user){
+     return res.status(401).json("User with this email already exists");
+    }
+    const newUser = new User({
+      email: email,
+      username:username,
+      password: bcrypt.hashSync(password, 10),
+    });
     const savedUser = await newUser.save();
-    console.log("new")
-    res.status(201).json(savedUser);
+    console.log("new user created")
+    return res.status(201).json(savedUser);
   } catch (err) {
-    res.status(500).json(err);
+    return res.status(500).json(err);
   }
 }
 
 exports.signin = async (req, res) => {
-  // console.log(req.body.password);
-  
-  await User.findOne({ email: req.body.email }).exec((error, user) => {
-    if (error) return res.status(400).json({ error });
-    if (user) {
-      if (bcrypt.compareSync(req.body.password, user.password)) {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-        const payload = {
-          id: user._id,
-          email: user.email,
-          username:user.username
-        };
-        const token = jwt.sign(payload, process.env.JWT_SECRET, {
-          expiresIn: '2h',
-        });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
 
-        return res.status(200).json({
-          token,
-          payload,
-        });
-      } else {
-        return res.status(400).json({ message: 'wrong password' });
-      }
-    } else {
-      return res.status(400).json({ message: 'user not found' });
-    }
-  });
+    const payload = {
+        id: user.id,
+        email: user.email,
+        isAdmin : user.isAdmin
+    };
+
+    jwt.sign(payload, process.env.JWT_SECRET, (err, token) => {
+      if (err) throw err;
+      res.status(200).json({ token });
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
 exports.signout = async (req, res) => {

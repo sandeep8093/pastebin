@@ -1,4 +1,4 @@
-const Pastes=require("../models/Paste");
+const Pastes= require("../models/Paste");
 
 exports.getPaste = async (req, res) => {
   try {
@@ -11,7 +11,8 @@ exports.getPaste = async (req, res) => {
 
 exports.getAllPastes = async (req, res) => {
   try {
-    const pasteMessages = await Pastes.find();
+    const userId= req.user.id;
+    const pasteMessages = await Pastes.find({userId: userId});
     res.status(200).json(pasteMessages);
   } catch (error) {
     res.status(404).json({ error: error.message });
@@ -19,10 +20,8 @@ exports.getAllPastes = async (req, res) => {
 };
 
 exports.createPaste = async (req, res) => {
-  const newPaste = Pastes(req.body);
-
- // console.log(newPaste);
-
+  const newPaste = new Pastes(req.body);
+  newPaste.userId=req.user.id;
   try {
     // Check if ID already exists
     const pasteMessages = await Pastes.findOne({ idx: req.body.idx });
@@ -38,7 +37,7 @@ exports.createPaste = async (req, res) => {
     }
   } catch (error) {
     console.log(error);
-    res.status(409).send(error.message);
+    res.status(409).json({error: error.message});
   }
 };
 
@@ -47,28 +46,28 @@ exports.editPaste = async (req, res) => {
   const editedPaste = req.body;
 
   try {
-    Pastes.findOneAndUpdate({ idx: req.params.idx }, editedPaste, function (err, doc) {
+    await Pastes.findOneAndUpdate({ idx: req.params.idx }, editedPaste, function (err, doc) {
       if (err) return res.status(500).send({ error: err });
 
-      if (doc) return res.status(200).send('Succesfully saved.');
-      return res.status(404).send('Document not found.');
+      if (doc) return res.status(200).json('Succesfully Updated.');
+      return res.status(404).json('Document not found.');
     });
 
   } catch (error) {
-    res.status(409).send(error.message);
+    res.status(409).json({error: error.message});
   }
 };
 
-exports.deletePaste = (req, res) => {
+exports.deletePaste = async(req, res) => {
 
   try {
-    Pastes.findOneAndDelete({ _id: req.params.idx }, function (err, doc) {
-      if (err) return res.status(500).send({ error: err });
+    await Pastes.findOneAndDelete({ _id: req.params.idx }, function (err, doc) {
+      if (err) return res.status(500).json({ error: err });
 
       if (doc) return res.status(202).json("Successfully deleted");
-      return res.status(404).send('Document not found.');
+      return res.status(404).json('Document not found.');
     });
   } catch (error) {
-    res.status(409).send(error.message);
+    res.status(409).json({error: error.message});
   }
 };

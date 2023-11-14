@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-exports.verifyToken = (req, res, next) => {
+const verifyToken = (req, res, next) => {
     let user;
     if (req.headers.authorization) {
         const token = req.headers.authorization.split(" ")[1];
@@ -22,6 +22,8 @@ exports.verifyToken = (req, res, next) => {
     next();
 }
 
+exports.verifyToken = verifyToken;
+
 exports.verifyTokenAndAuthorization = (req, res, next) => {
     verifyToken(req, res, () => {
       if (req.user.id === req.params.id ) {
@@ -32,20 +34,3 @@ exports.verifyTokenAndAuthorization = (req, res, next) => {
     });
   };
 
-exports.getUser = (req, res, next) => {
-    let user;
-    if (req.headers.authorization) {
-        const token = req.headers.authorization.split(" ")[1];
-        try {
-            user = jwt.verify(token, process.env.JWT_SECRET);
-        } catch {
-            err = {
-                name: 'TokenExpiredError',
-                message: 'auth token expired'
-            }
-            return res.status(400).json(err);
-        }
-    }
-    req.loggedInUser = user;
-    next();
-}
